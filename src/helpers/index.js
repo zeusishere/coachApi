@@ -43,6 +43,7 @@ const createAvailableSeatsForEmptyCoach = () => {
 
 // updates bookedSeats with newly added seats from seatGroup
 const markSeatsAsBooked = ({ bookedSeats, startSeat, endSeat }) => {
+  console.log(startSeat, endSeat);
   const seatsBookedInCurrentStep = [];
   for (; startSeat <= endSeat; startSeat += 1) {
     bookedSeats.push(startSeat);

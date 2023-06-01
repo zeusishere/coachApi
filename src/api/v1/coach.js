@@ -97,7 +97,7 @@ const reserveSeats = async (req, res) => {
       key: seats,
     });
 
-    //  if enogh number of seats are available as a single group in coach,book them
+    //  if enough number of seats are available as a single group in coach,book them
     if (availableSeatsGroupPosition < coach.availableSeats.length) {
       const [availableSeatGroup] = coach.availableSeats.splice(
         availableSeatsGroupPosition,
@@ -107,7 +107,7 @@ const reserveSeats = async (req, res) => {
       const firstBookedSeatNumber = availableSeatGroup.startingSeat;
       const lastBookedSeatNumber = firstBookedSeatNumber + seats - 1;
       // now we have to check if availableSeatGroup still has vacant seats , if yes than we create a new seatGroup of required size
-      //  and add it to coach.availableSeats
+      // and add it to coach.availableSeats
       if (lastBookedSeatNumber < availableSeatGroup.endingSeat) {
         coach.availableSeats.push({
           startingSeat: lastBookedSeatNumber + 1,
@@ -131,15 +131,34 @@ const reserveSeats = async (req, res) => {
       // we start with largest seat group, assign the seats and then move to next largest available seat group in loop
       let currentSeatGroupPos = coach.availableSeats.length - 1;
       let currentSeatGroup;
+
       while (seats > 0 && currentSeatGroupPos >= 0) {
         [currentSeatGroup] = coach.availableSeats.splice(
           currentSeatGroupPos,
           1
         );
+
+        // get the first and last booked seat numbers which will be booked
+        const firstBookedSeatNumber = currentSeatGroup.startingSeat;
+        const lastBookedSeatNumber = Math.min(
+          firstBookedSeatNumber + seats - 1,
+          currentSeatGroup.endingSeat
+        );
+
+        // now we have to check if currentSeatGroupPos still has vacant seats , if yes than we create a new seatGroup of required size
+        // and add it to coach.availableSeats
+        if (lastBookedSeatNumber < currentSeatGroup.endingSeat) {
+          coach.availableSeats.push({
+            startingSeat: lastBookedSeatNumber + 1,
+            endingSeat: currentSeatGroup.endingSeat,
+            seatGroupSize: currentSeatGroup.endingSeat - lastBookedSeatNumber,
+          });
+        }
+
         const { bookedSeats, seatsBookedInCurrentStep } = markSeatsAsBooked({
           bookedSeats: coach.bookedSeats,
-          startSeat: currentSeatGroup.startingSeat,
-          endSeat: currentSeatGroup.endingSeat,
+          startSeat: firstBookedSeatNumber,
+          endSeat: lastBookedSeatNumber,
         });
 
         seatNumbersBooked.push(...seatsBookedInCurrentStep);
@@ -153,6 +172,7 @@ const reserveSeats = async (req, res) => {
 
     return res.status(200).json({ success: true, coach, seatNumbersBooked });
   } catch (error) {
+    console.log("error ", error);
     return res.status(501).json({
       success: false,
       message: error.message || "There was an intenal server error",
