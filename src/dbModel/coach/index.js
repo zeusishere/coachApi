@@ -1,17 +1,17 @@
 const db = require("../../singleton/database");
 const coachDbModel = require("./schema")(db);
 const { sortAvailableSeatsQuery } = require("./query");
+// returns a single coach document with seat group sorted in ascending order of seatGroupSize
 const findOne = async () => {
   try {
     const query = sortAvailableSeatsQuery();
-    console.log(query);
     const document = await coachDbModel.aggregate(query);
     return document;
   } catch (error) {
     throw error;
   }
 };
-
+//  updates single coach document
 const updateOne = async (updateObject) => {
   try {
     const document = await coachDbModel.findOneAndUpdate({}, updateObject, {
@@ -22,10 +22,10 @@ const updateOne = async (updateObject) => {
     throw error;
   }
 };
+// creates an empty coach document
 const create = async (object) => {
   try {
     const document = await coachDbModel.create(object);
-    console.log("abc", document);
     return document;
   } catch (error) {
     throw error;

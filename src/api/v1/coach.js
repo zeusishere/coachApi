@@ -5,9 +5,11 @@ const {
   markSeatsAsBooked,
 } = require("../../helpers/index");
 
+// returns a coach document
 const fetchCoach = async (req, res) => {
   try {
     let [coach] = await coachDbModel.findOne();
+    //  if coach does not exist, create one
     if (!coach) {
       const availableSeats = createAvailableSeatsForEmptyCoach();
       coach = await coachDbModel.create({
@@ -21,7 +23,6 @@ const fetchCoach = async (req, res) => {
       coach: coach,
     });
   } catch (error) {
-    console.log(error);
     return res.status(501).json({
       success: false,
       message: error.message || "There was an intenal server error",
@@ -29,6 +30,7 @@ const fetchCoach = async (req, res) => {
   }
 };
 
+// resets the coach to an empty coach state
 const resetCoach = async (req, res) => {
   try {
     const availableSeats = createAvailableSeatsForEmptyCoach();
@@ -38,27 +40,25 @@ const resetCoach = async (req, res) => {
       bookedSeats: [],
     });
 
-    console.log("resetDocument ", resetDocument);
-
     return res.status(200).json({
       success: true,
       coach: resetDocument,
       message: "coach reset successfully!",
     });
   } catch (error) {
-    console.log(error);
-
     return res.status(501).json({
       success: false,
       message: error.message || "There was an intenal server error",
     });
   }
 };
-
+// reserves the seat in coach
 const reserveSeats = async (req, res) => {
   try {
     let { seats } = req.query;
     seats = Number(seats);
+
+    // validates the input to be a number b/w range (1-7]
     if (!typeof seats === "number" || seats <= 0 || seats > 7) {
       const error = new Error(
         "Invalid input. Seats should be whole number greater than 0 and less than 7."
@@ -68,6 +68,7 @@ const reserveSeats = async (req, res) => {
     }
     let [coach] = await coachDbModel.findOne();
 
+    //  if coach does nit exist, create one
     if (!coach) {
       const availableSeats = createAvailableSeatsForEmptyCoach();
       coach = await coachDbModel.create({
@@ -77,14 +78,10 @@ const reserveSeats = async (req, res) => {
       });
       [coach] = await coachDbModel.findOne();
     }
-    //  will contain seats booked in current attempt
+    // stores seats booked in current attempt
     const seatNumbersBooked = [];
-    console.log(
-      "coach.totalSeats - coach.bookedSeats < seats",
-      coach.totalSeats,
-      coach.bookedSeats.length,
-      seats
-    );
+
+    // if enough vacant seats are not available, throw an error to notify user
     if (coach.totalSeats - coach.bookedSeats.length < seats) {
       const error = new Error(
         "Required number of seats are not vacant in the Coach.Please try with a lower whole number."
@@ -100,18 +97,17 @@ const reserveSeats = async (req, res) => {
       key: seats,
     });
 
-    //  if seats are available as a single group in coach
-    // ! wrong
+    //  if enogh number of seats are available as a single group in coach,book them
     if (availableSeatsGroupPosition < coach.availableSeats.length) {
       const [availableSeatGroup] = coach.availableSeats.splice(
         availableSeatsGroupPosition,
         1
       );
-      console.log("availableSeatsGroupPosition ", availableSeatsGroupPosition);
-      // get the first and last booked seat numbers
+      // get the first and last booked seat numbers which will be booked
       const firstBookedSeatNumber = availableSeatGroup.startingSeat;
       const lastBookedSeatNumber = firstBookedSeatNumber + seats - 1;
-      // now we have to check if availableSeatGroup still has vacant seats , if yes than add it to coach.availableSeats
+      // now we have to check if availableSeatGroup still has vacant seats , if yes than we create a new seatGroup of required size
+      //  and add it to coach.availableSeats
       if (lastBookedSeatNumber < availableSeatGroup.endingSeat) {
         coach.availableSeats.push({
           startingSeat: lastBookedSeatNumber + 1,
@@ -119,7 +115,8 @@ const reserveSeats = async (req, res) => {
           seatGroupSize: availableSeatGroup.endingSeat - lastBookedSeatNumber,
         });
       }
-
+      // bookedSeats contains the seats booked in the coach so far
+      // seatsBookedInCurrentStep contains the seats booked in current request, used to highlight these seats separately with Orange colour
       const { bookedSeats, seatsBookedInCurrentStep } = markSeatsAsBooked({
         bookedSeats: coach.bookedSeats,
         startSeat: firstBookedSeatNumber,
@@ -128,11 +125,10 @@ const reserveSeats = async (req, res) => {
 
       seatNumbersBooked.push(...seatsBookedInCurrentStep);
       coach.bookedSeats = bookedSeats;
-      console.log("line 126 coach.bookedSeats ", coach.bookedSeats);
     }
-    // there is no available seat group of desired size
+    // if there is no available seat group of desired size, we consider two or more seatGroups to book the total seats required
     else {
-      // we start with largest seat group, assign the seats and then move to next available seat group
+      // we start with largest seat group, assign the seats and then move to next largest available seat group in loop
       let currentSeatGroupPos = coach.availableSeats.length - 1;
       let currentSeatGroup;
       while (seats > 0 && currentSeatGroupPos >= 0) {
@@ -154,12 +150,9 @@ const reserveSeats = async (req, res) => {
       }
     }
     coach = await coachDbModel.updateOne(coach);
-    console.log("coach ", coach);
 
     return res.status(200).json({ success: true, coach, seatNumbersBooked });
   } catch (error) {
-    console.log(error);
-
     return res.status(501).json({
       success: false,
       message: error.message || "There was an intenal server error",

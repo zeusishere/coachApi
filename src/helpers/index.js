@@ -1,14 +1,14 @@
+// performs a binary search on the input array, returns an exact match(array index) for
+//  key if present otherwise returns index of next element greater than key
 const search = ({ array, low, high, key }) => {
   if (!low) low = 0;
   if (!high) high = array.length - 1;
-  console.log("key ", key);
   let mid,
     midElementSeats,
     greaterElementIndex = array.length;
   while (low <= high) {
     mid = Math.floor(low + (high - low) / 2);
     midElementSeats = getValueOfSeats(array[mid]);
-    console.log("midElementSeats ", midElementSeats, key);
     if (key === midElementSeats) return mid;
     if (key < midElementSeats) {
       high = mid - 1;
@@ -20,10 +20,13 @@ const search = ({ array, low, high, key }) => {
   return greaterElementIndex;
 };
 
+// returns the group size
 const getValueOfSeats = (seatobject) => {
   return seatobject.seatGroupSize;
 };
 
+// contructs the coach structure for an empty coach
+// structure : 11 groups of size 7 and one group of size 3
 const createAvailableSeatsForEmptyCoach = () => {
   const availableSeats = [];
   for (let startingSeat = 1; startingSeat <= 80; startingSeat += 7) {
@@ -38,6 +41,7 @@ const createAvailableSeatsForEmptyCoach = () => {
   return availableSeats;
 };
 
+// updates bookedSeats with newly added seats from seatGroup
 const markSeatsAsBooked = ({ bookedSeats, startSeat, endSeat }) => {
   const seatsBookedInCurrentStep = [];
   for (; startSeat <= endSeat; startSeat += 1) {
